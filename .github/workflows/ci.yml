@@ -5,10 +5,12 @@ on:
     branches: [main]
   push:
     branches: [main]
+    tags:
+      - v*
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 # Cancel previous runs on the same PR / branch when new commits arrive.
 concurrency:
@@ -36,17 +38,20 @@ jobs:
           CONFIGS: Release Debug
         run: build.bat
 
+      - name: Package Release artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build/artifacts | Out-Null
+          Compress-Archive -Force -Path build/Release/*.dll, build/Release/*.pdb, build/tools/Release/extract_tickets.exe, build/tools/Release/*.pdb -DestinationPath build/artifacts/OpenSteamTool-Release-x64.zip
+          Compress-Archive -Force -Path build/Debug/*.dll, build/Debug/*.pdb, build/tools/Debug/extract_tickets.exe, build/tools/Debug/*.pdb -DestinationPath build/artifacts/OpenSteamTool-Debug-x64.zip
+
       - name: Upload Release artifacts
         uses: actions/upload-artifact@v4
         with:
           name: OpenSteamTool-Release-x64
           if-no-files-found: error
           retention-days: 30
-          path: |
-            build/Release/*.dll
-            build/Release/*.pdb
-            build/tools/Release/extract_tickets.exe
-            build/tools/Release/*.pdb
+          path: build/artifacts/OpenSteamTool-Release-x64.zip
 
       - name: Upload Debug artifacts
         uses: actions/upload-artifact@v4
@@ -54,8 +59,10 @@ jobs:
           name: OpenSteamTool-Debug-x64
           if-no-files-found: error
           retention-days: 30
-          path: |
-            build/Debug/*.dll
-            build/Debug/*.pdb
-            build/tools/Debug/extract_tickets.exe
-            build/tools/Debug/*.pdb
+          path: build/artifacts/OpenSteamTool-Debug-x64.zip
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/artifacts/*.zip
