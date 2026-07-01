@@ -27,8 +27,7 @@ jobs:
       - name: Build Release and Debug
         shell: cmd
         env:
-          GENERATOR: Visual Studio 17 2022
-          ARCH: x64
+          GENERATOR: Ninja Multi-Config
           CONFIGS: Release Debug
         run: build.bat
 
