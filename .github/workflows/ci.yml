@@ -5,6 +5,10 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 # Cancel previous runs on the same PR / branch when new commits arrive.
 concurrency:
@@ -13,28 +17,45 @@ concurrency:
 
 jobs:
   build:
-    name: Build (${{ matrix.config }})
+    name: Windows x64
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        config: [Release, Debug]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Configure MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
 
-      - name: Configure
-        run: cmake -S src -B build -G "Ninja Multi-Config"
+      - name: Build Release and Debug
+        shell: cmd
+        env:
+          GENERATOR: Ninja Multi-Config
+          CONFIGS: Release Debug
+        run: build.bat
 
-      - name: Build ${{ matrix.config }}
-        run: cmake --build build --config ${{ matrix.config }}
-
-      - name: Upload artifacts
-        if: success()
+      - name: Upload Release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: OpenSteamTool-${{ matrix.config }}-pr${{ github.event.pull_request.number || github.run_number }}
-          path: build/${{ matrix.config }}/
-          retention-days: 7
+          name: OpenSteamTool-Release-x64
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            build/Release/*.dll
+            build/Release/*.pdb
+            build/tools/Release/extract_tickets.exe
+            build/tools/Release/*.pdb
+
+      - name: Upload Debug artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenSteamTool-Debug-x64
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            build/Debug/*.dll
+            build/Debug/*.pdb
+            build/tools/Debug/extract_tickets.exe
+            build/tools/Debug/*.pdb
