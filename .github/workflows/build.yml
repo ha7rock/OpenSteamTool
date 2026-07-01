@@ -1,0 +1,54 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows x64
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Build Release and Debug
+        shell: cmd
+        env:
+          GENERATOR: Ninja Multi-Config
+          CONFIGS: Release Debug
+        run: build.bat
+
+      - name: Upload Release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenSteamTool-Release-x64
+          if-no-files-found: error
+          path: |
+            build/Release/*.dll
+            build/Release/*.pdb
+            build/tools/Release/extract_tickets.exe
+            build/tools/Release/*.pdb
+
+      - name: Upload Debug artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenSteamTool-Debug-x64
+          if-no-files-found: error
+          path: |
+            build/Debug/*.dll
+            build/Debug/*.pdb
+            build/tools/Debug/extract_tickets.exe
+            build/tools/Debug/*.pdb
